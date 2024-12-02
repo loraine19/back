@@ -1,0 +1,70 @@
+# services:
+#   postgres:
+#     image: postgres:13
+#     restart: always
+#     environment:
+#       - POSTGRES_USER=recipe
+#       - POSTGRES_PASSWORD=RecipePassword
+#     volumes:
+#       - postgres:/var/lib/postgresql/data
+#     ports:
+#       - '5432:5432'
+# volumes:
+#   postgres:
+
+
+
+# Define services
+services:
+
+  # Database service using PostgreSQL image
+  database:
+    image: postgres:latest  # Use the latest PostgreSQL image from Docker Hub
+    container_name: progrest_db
+    environment:
+      POSTGRES_DB: progrest_db  # Define the name of the database
+      POSTGRES_USER: username    # Define the username for accessing the database
+      POSTGRES_PASSWORD: password  # Define the password for the user
+    ports:
+      - "5432:5432"  # Forward the container's port 5432 to the host machine's port 5432 for accessing PostgreSQL
+
+  prisma-studio:
+    container_name: prisma-studio
+    image: timothyjmiller/prisma-studio:latest
+    restart: unless-stopped
+    env_file:
+     - .env
+    ports:
+      - 5555:5555
+  postgres:
+    container_name: prisma-postgres
+    image: postgres:alpine
+    restart: always
+    env_file:
+     - .env
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend service
+  backend:
+    build: .  # Build the Docker image using the Dockerfile in the current directory
+    container_name: progrest_backend
+    links:
+      - "database:database"
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+      - "3333:3333"
+ # Forward the container's port 3333 to the host machine's port 3333 for accessing the backend service
+    depends_on:
+      - database # Ensure that the backend service starts after the database service is up and running
+    env_file:
+      - .env  # Load environment variables from the .env file in the current directory
+
